@@ -1,0 +1,14 @@
+## Interface: 120000, 50500, 40402, 30404, 11506
+## Title: Alge
+## Author: Alge
+## Version: 1.0.0
+## Notes: Restores access to removed interface options in Legion
+## DefaultState: Enabled
+## LoadOnDemand: 0
+## SavedVariables: pvpRatings
+
+PvpRatingDisplay.lua
+QueueTime.lua
+PetCastBar.lua
+
+Buffs.lua
