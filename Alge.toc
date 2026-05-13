@@ -10,5 +10,6 @@
 PvpRatingDisplay.lua
 QueueTime.lua
 PetCastBar.lua
+CastPercent.lua
 
 Buffs.lua

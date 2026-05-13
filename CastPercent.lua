@@ -1,0 +1,149 @@
+local castInfo = {}
+local CHANNEL_COMPLETE_THRESHOLD = 0.25
+
+-- percent display
+local displayFrame = CreateFrame("Frame", "AlgeCastPercentFrame", UIParent)
+displayFrame:SetSize(60, 30)
+displayFrame:SetFrameStrata("HIGH")
+displayFrame:SetAlpha(0)
+
+local displayText = displayFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+displayText:SetAllPoints(displayFrame)
+displayText:SetJustifyH("LEFT")
+
+local animGroup = displayFrame:CreateAnimationGroup()
+local hold = animGroup:CreateAnimation("Alpha")
+hold:SetFromAlpha(1)
+hold:SetToAlpha(1)
+hold:SetDuration(1.5)
+hold:SetOrder(1)
+local fadeOut = animGroup:CreateAnimation("Alpha")
+fadeOut:SetFromAlpha(1)
+fadeOut:SetToAlpha(0)
+fadeOut:SetDuration(0.5)
+fadeOut:SetOrder(2)
+animGroup:SetScript("OnFinished", function()
+    displayFrame:SetAlpha(0)
+end)
+
+local function ShowPercent(pct, interrupted)
+    if interrupted then
+        displayText:SetTextColor(1, 0.3, 0.3)
+    else
+        displayText:SetTextColor(1, 1, 0)
+    end
+    displayText:SetFormattedText("%.0f%%", pct)
+    displayFrame:SetAlpha(1)
+    animGroup:Stop()
+    animGroup:Play()
+end
+
+local function CalcPercent()
+    if not castInfo.startTime or not castInfo.duration or castInfo.duration <= 0 then
+        return nil
+    end
+    local _, _, _, worldLatencyMS = GetNetStats()
+    local rawElapsed = GetTime() - castInfo.startTime
+    print(string.format("[CastPercent] worldLatencyMS: %d, rawElapsed: %.3f", worldLatencyMS, rawElapsed))
+    return math.min((rawElapsed + worldLatencyMS / 1000) / castInfo.duration * 100, 100)
+end
+
+-- lag line on default cast bar
+local lagLine
+
+local function EnsureLagLine()
+    if lagLine or not PlayerCastingBarFrame then return end
+    lagLine = PlayerCastingBarFrame:CreateTexture(nil, "OVERLAY", nil, 7)
+    lagLine:SetWidth(2)
+    lagLine:SetColorTexture(1, 1, 1, 0.9)
+    lagLine:Hide()
+end
+
+local function ShowLagLine()
+    EnsureLagLine()
+    if not lagLine then return end
+
+    local name, _, _, startTimeMS, endTimeMS = UnitCastingInfo("player")
+    if not name then
+        lagLine:Hide()
+        return
+    end
+
+    local duration = (endTimeMS - startTimeMS) / 1000
+    if duration <= 0 then
+        lagLine:Hide()
+        return
+    end
+
+    local _, _, _, worldLatencyMS = GetNetStats()
+    local lagSec = worldLatencyMS / 1000
+    local pct = math.max(0, math.min(1, (duration - lagSec) / duration))
+
+    local bar = PlayerCastingBarFrame
+    lagLine:SetHeight(bar:GetHeight())
+    lagLine:ClearAllPoints()
+    lagLine:SetPoint("CENTER", bar, "LEFT", pct * bar:GetWidth(), 0)
+    lagLine:Show()
+end
+
+local function HideLagLine()
+    if lagLine then lagLine:Hide() end
+end
+
+local events = CreateFrame("Frame")
+events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
+
+events:SetScript("OnEvent", function(_, event, unit)
+    if event == "PLAYER_LOGIN" then
+        EnsureLagLine()
+        if PlayerCastingBarFrame then
+            displayFrame:SetPoint("LEFT", PlayerCastingBarFrame, "RIGHT", 8, 0)
+        end
+    elseif event == "UNIT_SPELLCAST_START" then
+        local name, _, _, startTimeMS, endTimeMS = UnitCastingInfo("player")
+        if name then
+            castInfo = {
+                startTime = startTimeMS / 1000,
+                endTime = endTimeMS / 1000,
+                duration = (endTimeMS - startTimeMS) / 1000,
+                isChanneling = false,
+            }
+        end
+        ShowLagLine()
+    elseif event == "UNIT_SPELLCAST_STOP" then
+        castInfo = {}
+        HideLagLine()
+    elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+        local name, _, _, startTimeMS, endTimeMS = UnitChannelInfo("player")
+        if name then
+            castInfo = {
+                startTime = startTimeMS / 1000,
+                endTime = endTimeMS / 1000,
+                duration = (endTimeMS - startTimeMS) / 1000,
+                isChanneling = true,
+            }
+        end
+    elseif event == "UNIT_SPELLCAST_FAILED" then
+        local pct = CalcPercent()
+        if pct then ShowPercent(pct, false) end
+        castInfo = {}
+        HideLagLine()
+    elseif event == "UNIT_SPELLCAST_INTERRUPTED" then
+        local pct = CalcPercent()
+        if pct then ShowPercent(pct, true) end
+        castInfo = {}
+        HideLagLine()
+    elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
+        if castInfo.endTime and GetTime() < castInfo.endTime - CHANNEL_COMPLETE_THRESHOLD then
+            local pct = CalcPercent()
+            if pct then ShowPercent(pct, false) end
+        end
+        castInfo = {}
+    end
+end)
