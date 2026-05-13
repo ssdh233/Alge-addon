@@ -1,6 +1,7 @@
 local f = CreateFrame("Frame", "QueueTimeFrame", UIParent)
 f:SetSize(300, 60)
 f:SetPoint("TOP", UIParent, "TOP", 0, -50)
+local LINE_HEIGHT = 58
 f:SetMovable(true)
 f:EnableMouse(true)
 f:RegisterForDrag("LeftButton")
@@ -18,49 +19,39 @@ f.text:SetText("")
 
 f:Hide()
 
-local startTime = nil
-
 local function UpdateQueueInfo()
-    local inQueue = false
-    local queueType = ""
-    local avgWait = nil
-    local waitTime = nil
-    
+    local queues = {}
+
     for i = 1, 3 do
-        local status, mapName, teamSize, registeredMatch, suspendedQueue = GetBattlefieldStatus(i)
+        local status, mapName = GetBattlefieldStatus(i)
         if status == "queued" or status == "confirm" then
-            inQueue = true
-            queueType = mapName
             local estimatedTime = GetBattlefieldEstimatedWaitTime(i)
-            if estimatedTime and estimatedTime > 0 then
-                avgWait = math.floor(estimatedTime / 60000)
-            end
-            waitTime = math.floor(GetBattlefieldTimeWaited(i) / 1000)
-            break
+            local avgWait = (estimatedTime and estimatedTime > 0) and math.floor(estimatedTime / 60000) or nil
+            local waitTime = math.floor(GetBattlefieldTimeWaited(i) / 1000)
+            table.insert(queues, { name = mapName, avgWait = avgWait, waitTime = waitTime })
         end
     end
 
-    
-    if inQueue then
-        local mins = math.floor(waitTime / 60)
-        local secs = math.floor(waitTime % 60)
-        
-        local displayText = queueType;
-        
-        if avgWait and avgWait > 0 then
-            displayText = displayText .. string.format("\nAverage Wait Time: %dm", avgWait)
+    if #queues > 0 then
+        local lines = {}
+        for _, q in ipairs(queues) do
+            local mins = math.floor(q.waitTime / 60)
+            local secs = math.floor(q.waitTime % 60)
+            local entry = q.name
+            if q.avgWait and q.avgWait > 0 then
+                entry = entry .. string.format("\nAverage Wait Time: %dm", q.avgWait)
+            end
+            if mins > 0 then
+                entry = entry .. string.format("\nTime In Queue: %dm %ds", mins, secs)
+            else
+                entry = entry .. string.format("\nTime In Queue: %ds", secs)
+            end
+            table.insert(lines, entry)
         end
-
-        if mins > 0 then
-        	displayText = displayText .. string.format("\nTime In Queue: %dm %ds", mins, secs)
-        else 
-        	displayText = displayText .. string.format("\nTime In Queue: %ds", secs)
-        end
-
-        f.text:SetText(displayText)
+        f:SetHeight(LINE_HEIGHT * #queues)
+        f.text:SetText(table.concat(lines, "\n\n"))
         f:Show()
     else
-        startTime = nil
         f:Hide()
     end
 end
