@@ -44,7 +44,6 @@ local function CalcPercent()
     end
     local _, _, _, worldLatencyMS = GetNetStats()
     local rawElapsed = GetTime() - castInfo.startTime
-    print(string.format("[CastPercent] worldLatencyMS: %d, rawElapsed: %.3f", worldLatencyMS, rawElapsed))
     return math.min((rawElapsed + worldLatencyMS / 1000) / castInfo.duration * 100, 100)
 end
 

@@ -5,11 +5,14 @@
 ## Notes: Restores access to removed interface options in Legion
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: pvpRatings
+## SavedVariables: pvpRatings AlgeDebuffsDB
+
+lib\LibStub\LibStub.lua
+lib\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
 
 PvpRatingDisplay.lua
 QueueTime.lua
 PetCastBar.lua
 CastPercent.lua
 
-Buffs.lua
+Debuffs.lua

@@ -26,7 +26,7 @@ local function UpdateQueueInfo()
         local status, mapName = GetBattlefieldStatus(i)
         if status == "queued" or status == "confirm" then
             local estimatedTime = GetBattlefieldEstimatedWaitTime(i)
-            local avgWait = (estimatedTime and estimatedTime > 0) and math.floor(estimatedTime / 60000) or nil
+            local avgWait = (estimatedTime and estimatedTime > 0) and math.floor(estimatedTime / 1000) or nil
             local waitTime = math.floor(GetBattlefieldTimeWaited(i) / 1000)
             table.insert(queues, { name = mapName, avgWait = avgWait, waitTime = waitTime })
         end
@@ -39,7 +39,13 @@ local function UpdateQueueInfo()
             local secs = math.floor(q.waitTime % 60)
             local entry = q.name
             if q.avgWait and q.avgWait > 0 then
-                entry = entry .. string.format("\nAverage Wait Time: %dm", q.avgWait)
+                local avgMins = math.floor(q.avgWait / 60)
+                local avgSecs = q.avgWait % 60
+                if avgMins > 0 then
+                    entry = entry .. string.format("\nAverage Wait Time: %dm %ds", avgMins, avgSecs)
+                else
+                    entry = entry .. string.format("\nAverage Wait Time: %ds", avgSecs)
+                end
             end
             if mins > 0 then
                 entry = entry .. string.format("\nTime In Queue: %dm %ds", mins, secs)
