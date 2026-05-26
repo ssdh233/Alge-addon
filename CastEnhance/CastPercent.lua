@@ -1,7 +1,6 @@
 local castInfo = {}
 local CHANNEL_COMPLETE_THRESHOLD = 0.25
 
--- percent display
 local displayFrame = CreateFrame("Frame", "AlgeCastPercentFrame", UIParent)
 displayFrame:SetSize(60, 30)
 displayFrame:SetFrameStrata("HIGH")
@@ -47,48 +46,6 @@ local function CalcPercent()
     return math.min((rawElapsed + worldLatencyMS / 1000) / castInfo.duration * 100, 100)
 end
 
--- lag line on default cast bar
-local lagLine
-
-local function EnsureLagLine()
-    if lagLine or not PlayerCastingBarFrame then return end
-    lagLine = PlayerCastingBarFrame:CreateTexture(nil, "OVERLAY", nil, 7)
-    lagLine:SetWidth(2)
-    lagLine:SetColorTexture(1, 1, 1, 0.9)
-    lagLine:Hide()
-end
-
-local function ShowLagLine()
-    EnsureLagLine()
-    if not lagLine then return end
-
-    local name, _, _, startTimeMS, endTimeMS = UnitCastingInfo("player")
-    if not name then
-        lagLine:Hide()
-        return
-    end
-
-    local duration = (endTimeMS - startTimeMS) / 1000
-    if duration <= 0 then
-        lagLine:Hide()
-        return
-    end
-
-    local _, _, _, worldLatencyMS = GetNetStats()
-    local lagSec = worldLatencyMS / 1000
-    local pct = math.max(0, math.min(1, (duration - lagSec) / duration))
-
-    local bar = PlayerCastingBarFrame
-    lagLine:SetHeight(bar:GetHeight())
-    lagLine:ClearAllPoints()
-    lagLine:SetPoint("CENTER", bar, "LEFT", pct * bar:GetWidth(), 0)
-    lagLine:Show()
-end
-
-local function HideLagLine()
-    if lagLine then lagLine:Hide() end
-end
-
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
@@ -98,9 +55,8 @@ events:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
 events:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
 events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
 
-events:SetScript("OnEvent", function(_, event, unit)
+events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
-        EnsureLagLine()
         if PlayerCastingBarFrame then
             displayFrame:SetPoint("LEFT", PlayerCastingBarFrame, "RIGHT", 8, 0)
         end
@@ -114,10 +70,8 @@ events:SetScript("OnEvent", function(_, event, unit)
                 isChanneling = false,
             }
         end
-        ShowLagLine()
     elseif event == "UNIT_SPELLCAST_STOP" then
         castInfo = {}
-        HideLagLine()
     elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
         local name, _, _, startTimeMS, endTimeMS = UnitChannelInfo("player")
         if name then
@@ -132,12 +86,10 @@ events:SetScript("OnEvent", function(_, event, unit)
         local pct = CalcPercent()
         if pct then ShowPercent(pct, false) end
         castInfo = {}
-        HideLagLine()
     elseif event == "UNIT_SPELLCAST_INTERRUPTED" then
         local pct = CalcPercent()
         if pct then ShowPercent(pct, true) end
         castInfo = {}
-        HideLagLine()
     elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
         if castInfo.endTime and GetTime() < castInfo.endTime - CHANNEL_COMPLETE_THRESHOLD then
             local pct = CalcPercent()

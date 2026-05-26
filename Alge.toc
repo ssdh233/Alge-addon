@@ -12,7 +12,9 @@ lib\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
 
 PvpRatingDisplay.lua
 QueueTime.lua
-PetCastBar.lua
-CastPercent.lua
+CastEnhance\PetCastBar.lua
+CastEnhance\CastLagLine.lua
+CastEnhance\CastPercent.lua
+CastEnhance\FocusSpellLock.lua
 
 Debuffs.lua
