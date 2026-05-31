@@ -23,7 +23,7 @@ end
 
 local function UpdateCooldown()
     local info = C_Spell.GetSpellCooldown(SPELL_LOCK_ID)
-    if info and info.startTime and info.startTime > 0 then
+    if info and info.duration and info.duration > 0 then
         cooldown:SetCooldown(info.startTime, info.duration)
     else
         cooldown:Clear()

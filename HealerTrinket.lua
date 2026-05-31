@@ -26,7 +26,7 @@ local function ShowAlert(unit)
     end
     label:SetText(name .. " trinket!")
 
-    tex:SetTexture(GetInventoryItemTexture(unit, 13) or GetInventoryItemTexture(unit, 14) or FALLBACK_ICON)
+    tex:SetTexture(GetInventoryItemTexture(unit, 14) or FALLBACK_ICON)
 
     notifFrame:SetAlpha(1)
     notifFrame:Show()
@@ -70,6 +70,10 @@ local function CheckAllFriendly()
     for i = 1, 4 do
         CheckUnit("party" .. i)
     end
+end
+
+function AlgeHealerTrinket_Test()
+    ShowAlert("player")
 end
 
 local evtFrame = CreateFrame("Frame")

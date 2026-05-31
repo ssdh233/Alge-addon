@@ -137,5 +137,9 @@ SlashCmdList["ALGE"] = function(msg)
         else
             showTestIcon()
         end
+    elseif cmd == "healer test" then
+        if AlgeHealerTrinket_Test then
+            AlgeHealerTrinket_Test()
+        end
     end
 end
