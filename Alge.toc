@@ -18,3 +18,4 @@ CastEnhance\CastPercent.lua
 CastEnhance\FocusSpellLock.lua
 
 Debuffs.lua
+HelaerTrinket.lua
