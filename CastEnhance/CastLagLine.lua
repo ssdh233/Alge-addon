@@ -1,6 +1,5 @@
 local configs = {
     player = { barName = "PlayerCastingBarFrame" },
-    focus  = { barName = "FocusFrameSpellBar" },
 }
 
 local function EnsureLagLine(cfg)
@@ -13,28 +12,21 @@ local function EnsureLagLine(cfg)
     cfg.lagLine:Hide()
 end
 
-local function ShowLagLine(cfg, unit)
+local function ShowLagLine(cfg, unit, durationSec)
     EnsureLagLine(cfg)
     if not cfg.lagLine then return end
 
     local bar = _G[cfg.barName]
     if not bar then return end
 
-    local name, _, _, startTimeMS, endTimeMS = UnitCastingInfo(unit)
-    if not name then
-        cfg.lagLine:Hide()
-        return
-    end
-
-    local duration = (endTimeMS - startTimeMS) / 1000
-    if duration <= 0 then
+    if not UnitCastingInfo(unit) or durationSec <= 0 then
         cfg.lagLine:Hide()
         return
     end
 
     local _, _, _, worldLatencyMS = GetNetStats()
     local lagSec = worldLatencyMS / 1000
-    local pct = math.max(0, math.min(1, (duration - lagSec) / duration))
+    local pct = math.max(0, math.min(1, (durationSec - lagSec) / durationSec))
 
     cfg.lagLine:SetHeight(bar:GetHeight())
     cfg.lagLine:ClearAllPoints()
@@ -48,12 +40,12 @@ end
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
-events:RegisterUnitEvent("UNIT_SPELLCAST_START", "player", "focus")
-events:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player", "focus")
-events:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player", "focus")
-events:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player", "focus")
+events:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+events:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
 
-events:SetScript("OnEvent", function(_, event, unit)
+events:SetScript("OnEvent", function(_, event, unit, _, spellId)
     if event == "PLAYER_LOGIN" then
         for _, cfg in pairs(configs) do
             EnsureLagLine(cfg)
@@ -62,7 +54,9 @@ events:SetScript("OnEvent", function(_, event, unit)
         local cfg = configs[unit]
         if not cfg then return end
         if event == "UNIT_SPELLCAST_START" then
-            ShowLagLine(cfg, unit)
+            local info = spellId and C_Spell.GetSpellInfo(spellId)
+            local durationSec = info and info.castTime and (info.castTime / 1000) or 0
+            ShowLagLine(cfg, unit, durationSec)
         else
             HideLagLine(cfg)
         end
